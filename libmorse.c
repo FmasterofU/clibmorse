@@ -1,3 +1,13 @@
+#include <string.h>
+#include <ctype.h>
+
+
+#define MORSE_SIGNAL_ON '1'
+#define MORSE_SIGNAL_OFF '0'
+#define ASCII_ZERO 48 // '0'
+#define ASCII_A 65  // 'A'
+#define ASCII_SPACE 32 // ' '
+
 static const char numbers[10][6] = {
     {"-----\0"}, //0
     {".----\0"}, //1
@@ -46,21 +56,29 @@ static unsigned char letterSpaceUnitLen = 3;
 static unsigned char letterPartSpaceUnitLen = 1;
 static unsigned char wordSpaceUnitLen = 7;
 
-void resetMorseParams(){
-    dotUnitLen = 1;
-    dashUnitLen = 3;
-    letterSpaceUnitLen = 3;
-    letterPartSpaceUnitLen = 1;
-    wordSpaceUnitLen = 7;
-}
-
-void setMorseParams(unsigned char dotUnit, unsigned char dashUnit,
-                    unsigned char letterSpaceUnit,
-                    unsigned char letterPartSpaceUnit,
-                    unsigned char wordSpaceUnit){
-    dotUnitLen = dotUnit;
-    dashUnitLen = dashUnit;
-    letterSpaceUnitLen = letterSpaceUnit;
-    letterPartSpaceUnitLen = letterPartSpaceUnit;
-    wordSpaceUnitLen = wordSpaceUnit;
+char* encode(char* text){
+    char *ret = malloc(4096);
+    int i, retiter = 0;
+    for(i = 0; i<strlen(text); i++){
+        char tempChar = (char) toupper(text[i]);
+        if(tempChar == ASCII_SPACE)
+            for(int k = 0; k<wordSpaceUnitLen; k++)
+                ret[retiter++]=MORSE_SIGNAL_OFF;
+        else {
+            char * tempMorseNotation = (tempChar-ASCII_ZERO<=9) ? numbers[tempChar-ASCII_ZERO] : letters[tempChar-ASCII_A];
+            for(;*tempMorseNotation != '\0';tempMorseNotation++){
+                if(*tempMorseNotation=='.')
+                    for(int j = 0; j<dotUnitLen; j++)
+                        ret[retiter++]=MORSE_SIGNAL_ON;
+                else if(*tempMorseNotation=='-')
+                    for(int j = 0; j<dashUnitLen; j++)
+                        ret[retiter++]=MORSE_SIGNAL_ON;
+                for(int k = 0; k<letterPartSpaceUnitLen && *(tempMorseNotation+1) != '\0'; k++)
+                    ret[retiter++]=MORSE_SIGNAL_OFF;
+            }
+            for(int k = 0; k<letterSpaceUnitLen && *(text+i+1) != ASCII_SPACE && *(text+i+1) != '\0'; k++)
+                ret[retiter++]=MORSE_SIGNAL_OFF;
+        }
+    }
+    return ret;
 }
