@@ -2,9 +2,11 @@
 #include <string.h>
 #include <ctype.h>
 
-
+#define NULL_TERMINATOR '\0'
 #define MORSE_SIGNAL_ON '1'
 #define MORSE_SIGNAL_OFF '0'
+#define MORSE_DOT '.'
+#define MORSE_DASH '-'
 #define ASCII_ZERO 48 // '0'
 #define ASCII_A 65  // 'A'
 #define ASCII_SPACE 32 // ' '
@@ -19,6 +21,10 @@
 #define ASCII_HYPHEN '-'
 #define ASCII_PLUS_SIGN '+'
 #define ASCII_EQUALS_SIGN '='
+#define ASCII_BRACKET_OPEN '('
+#define ASCII_BRACKET_CLOSED ')'
+#define ASCII_AT_SIGN '@'
+#define ASCII_AMPERSAND '&'
 
 static const char numbers[10][6] = {
     {"-----\0"}, //0
@@ -62,17 +68,21 @@ static const char letters[26][5] = {
     {"--..\0"}   //Z
 };
 
-static const char fullStopPeriod[6] = ".-.-.-\0";
-static const char colon[6] = "---...\0";
-static const char apostrophe[6] = ".----.\0";
-static const char comma[6] = "--..--\0";
-static const char exclamationMark[6] = "-.-.--\0";
-static const char questionMark[6] = "..--..\0";
-static const char quotationMarks[6] = ".-..-.\0";
+static const char fullStopPeriod[7] = ".-.-.-\0";
+static const char colon[7] = "---...\0";
+static const char apostrophe[7] = ".----.\0";
+static const char comma[7] = "--..--\0";
+static const char exclamationMark[7] = "-.-.--\0";
+static const char questionMark[7] = "..--..\0";
+static const char quotationMarks[7] = ".-..-.\0";
 static const char slash[6] = "-..-.\0";
-static const char hyphen[6] = "-....-\0";
+static const char hyphen[7] = "-....-\0";
 static const char plusSign[6] = ".-.-.\0";
 static const char equalsSign[6] = "-...-\0";
+static const char bracketOpen[6] = "-.--.\0";
+static const char bracketClosed[7] = "-.--.-\0";
+static const char atSign[7] = ".--.-.\0";
+static const char ampersand[6] = ".-...\0";
 
 static unsigned char dotUnitLen = 1;
 static unsigned char dashUnitLen = 3;
@@ -80,29 +90,80 @@ static unsigned char letterSpaceUnitLen = 3;
 static unsigned char letterPartSpaceUnitLen = 1;
 static unsigned char wordSpaceUnitLen = 7;
 
+void encodeCharacter(char * ret, const char * morseKey, int * retiter){
+    for(; *morseKey != NULL_TERMINATOR; morseKey++){
+        if(*morseKey==MORSE_DOT)
+            for(int j = 0; j<dotUnitLen; j++)
+                ret[(*retiter)++]=MORSE_SIGNAL_ON;
+        else if(*morseKey==MORSE_DASH)
+            for(int j = 0; j<dashUnitLen; j++)
+                ret[(*retiter)++]=MORSE_SIGNAL_ON;
+        for(int k = 0; k<letterPartSpaceUnitLen && *(morseKey+1) != NULL_TERMINATOR; k++)
+            ret[(*retiter)++]=MORSE_SIGNAL_OFF;
+    }
+}
+
 char* encode(char* text){
     char *ret = (char*) malloc(4096);
     int i, retiter = 0;
     for(i = 0; i<strlen(text); i++){
         char tempChar = (char) toupper(text[i]);
-        if(tempChar == ASCII_SPACE)
+        switch(tempChar){
+        case ASCII_SPACE:
             for(int k = 0; k<wordSpaceUnitLen; k++)
                 ret[retiter++]=MORSE_SIGNAL_OFF;
-        else{
-            const char * tempMorseNotation = (tempChar-ASCII_ZERO<=9) ? numbers[tempChar-ASCII_ZERO] : letters[tempChar-ASCII_A];
-            for(; *tempMorseNotation != '\0'; tempMorseNotation++){
-                if(*tempMorseNotation=='.')
-                    for(int j = 0; j<dotUnitLen; j++)
-                        ret[retiter++]=MORSE_SIGNAL_ON;
-                else if(*tempMorseNotation=='-')
-                    for(int j = 0; j<dashUnitLen; j++)
-                        ret[retiter++]=MORSE_SIGNAL_ON;
-                for(int k = 0; k<letterPartSpaceUnitLen && *(tempMorseNotation+1) != '\0'; k++)
-                    ret[retiter++]=MORSE_SIGNAL_OFF;
-            }
-            for(int k = 0; k<letterSpaceUnitLen && *(text+i+1) != ASCII_SPACE && *(text+i+1) != '\0'; k++)
-                ret[retiter++]=MORSE_SIGNAL_OFF;
+            break;
+        case ASCII_FSTOP_PERIOD:
+            encodeCharacter(ret, fullStopPeriod, &retiter);
+            break;
+        case ASCII_COLON:
+            encodeCharacter(ret, colon, &retiter);
+            break;
+        case ASCII_APOSTROPHE:
+            encodeCharacter(ret, apostrophe, &retiter);
+            break;
+        case ASCII_COMMA:
+            encodeCharacter(ret, comma, &retiter);
+            break;
+        case ASCII_EXCLAMATION_MARK:
+            encodeCharacter(ret, exclamationMark, &retiter);
+            break;
+        case ASCII_QUESTION_MARK:
+            encodeCharacter(ret, questionMark, &retiter);
+            break;
+        case ASCII_QUOTATION_MARKS:
+            encodeCharacter(ret, quotationMarks, &retiter);
+            break;
+        case ASCII_SLASH:
+            encodeCharacter(ret, slash, &retiter);
+            break;
+        case ASCII_HYPHEN:
+            encodeCharacter(ret, hyphen, &retiter);
+            break;
+        case ASCII_PLUS_SIGN:
+            encodeCharacter(ret, plusSign, &retiter);
+            break;
+        case ASCII_EQUALS_SIGN:
+            encodeCharacter(ret, equalsSign, &retiter);
+            break;
+        case ASCII_BRACKET_OPEN:
+            encodeCharacter(ret, bracketOpen, &retiter);
+            break;
+        case ASCII_BRACKET_CLOSED:
+            encodeCharacter(ret, bracketClosed, &retiter);
+            break;
+        case ASCII_AT_SIGN:
+            encodeCharacter(ret, atSign, &retiter);
+            break;
+        case ASCII_AMPERSAND:
+            encodeCharacter(ret, ampersand, &retiter);
+            break;
+        default:
+            ;const char * tempMorseNotation = (tempChar-ASCII_ZERO<=9) ? numbers[tempChar-ASCII_ZERO] : letters[tempChar-ASCII_A];  // about that ";", requirement per standard, after a label (default) only an statement can follow, and declaration is not a statement
+            encodeCharacter(ret, tempMorseNotation, &retiter);
         }
+        for(int k = 0; k<letterSpaceUnitLen && *(text+i) != ASCII_SPACE && *(text+i+1) != ASCII_SPACE && *(text+i+1) != '\0'; k++)
+            ret[retiter++]=MORSE_SIGNAL_OFF;
     }
     return ret;
 }
