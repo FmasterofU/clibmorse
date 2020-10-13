@@ -112,7 +112,7 @@ void addCharacterToStream(unsigned char * ret, const unsigned char * morseKey, u
     else return;
 }
 
-void encodeCharacter(unsigned char * ret, unsigned char currChar, const unsigned char * const src, unsigned long * retiter, unsigned long srciter, char returnType){
+void encodeCharacter(unsigned char * ret, unsigned char currChar, const unsigned char * src, unsigned long * retiter, unsigned long srciter, char returnType){
     switch(currChar){
         case ASCII_SPACE:
             if(returnType==RETURN_MORSE_SIGNAL_STREAM)
@@ -180,7 +180,7 @@ void encodeCharacter(unsigned char * ret, unsigned char currChar, const unsigned
             ret[(*retiter)++]=ASCII_SPACE;
 }
 
-unsigned char* encode(unsigned char * dest, unsigned char * src, unsigned long capacity, char returnType){
+unsigned char* encode(unsigned char * dest, const unsigned char * src, unsigned long capacity, char returnType){
     if(returnType!=RETURN_MORSE_NOTATION && returnType!=RETURN_MORSE_SIGNAL_STREAM)
         return NULL;
     unsigned long i, destiter = 0;
@@ -197,7 +197,7 @@ unsigned char* encode(unsigned char * dest, unsigned char * src, unsigned long c
     return dest;
 }
 
-unsigned char * encodeMorseDynMemAlloc(unsigned char * src, char returnType){
+unsigned char * encodeMorseDynMemAlloc(const unsigned char * src, char returnType){
     if(returnType == RETURN_MORSE_NOTATION){
         unsigned char * dest = (unsigned char *) calloc(strlen(src)*MAX_MORSE_TEXT_SIZE_PER_CHAR+1, sizeof(unsigned char));
         if(dest==NULL) return NULL;
@@ -209,7 +209,7 @@ unsigned char * encodeMorseDynMemAlloc(unsigned char * src, char returnType){
     } else return NULL;
 }
 
-unsigned char * encodeMorse(unsigned char * dest, unsigned char * src, unsigned long capacity, char returnType){
+unsigned char * encodeMorse(unsigned char * dest, const unsigned char * src, unsigned long capacity, char returnType){
     if(returnType == RETURN_MORSE_NOTATION || returnType == RETURN_MORSE_SIGNAL_STREAM)
         return encode(dest, src, capacity, returnType);
     else return NULL;
@@ -222,10 +222,11 @@ void sendFrame(int consecutiveSignals, char signalType, long unitTime, void (*si
     }
 }
 
-void sendMorse(unsigned char * dataStream, long unitTime, void (*signal_func) (long time), void (*sleep_func)(long time)){
+void sendMorseStream(const unsigned char * dataStream, long unitTime, void (*signal_func) (long time), void (*sleep_func)(long time)){
     int consecutiveSignals = 0;
     unsigned char signalType = MORSE_SIGNAL_OFF;
-    for(unsigned long i = 0; i<strlen(dataStream); i++){
+    unsigned long len = strlen(dataStream);
+    for(unsigned long i = 0; i<len; i++){
         if(dataStream[i]==signalType)
             consecutiveSignals++;
         else if(dataStream[i]!=signalType){
@@ -235,4 +236,23 @@ void sendMorse(unsigned char * dataStream, long unitTime, void (*signal_func) (l
         }
     }
     sendFrame(consecutiveSignals, signalType, unitTime, signal_func, sleep_func);
+}
+
+void sendMorse(const unsigned char * morse, long unitTime, void (*signal_func) (long time), void (*sleep_func)(long time)){
+    unsigned long len = strlen(morse);
+    for(unsigned long i = 0; i<len; i++){
+        if(morse[i]==ASCII_SPACE && morse[i+1]!=ASCII_SPACE)
+            sendFrame(letterSpaceUnitLen, MORSE_SIGNAL_OFF, unitTime, signal_func, sleep_func);
+        else if(morse[i]==ASCII_SPACE && morse[i+1]==ASCII_SPACE && morse[i+2]!=NULL_TERMINATOR && morse[i+2]==ASCII_SPACE){
+            sendFrame(wordSpaceUnitLen, MORSE_SIGNAL_OFF, unitTime, signal_func, sleep_func);
+            i+=2;
+        }else if(morse[i+1]==NULL_TERMINATOR || morse[i+1]==ASCII_SPACE){
+            if(morse[i]==MORSE_DOT) sendFrame(dotUnitLen, MORSE_SIGNAL_ON, unitTime, signal_func, sleep_func);
+            else if(morse[i]==MORSE_DASH) sendFrame(dashUnitLen, MORSE_SIGNAL_ON, unitTime, signal_func, sleep_func);
+        }else{
+            if(morse[i]==MORSE_DOT) sendFrame(dotUnitLen, MORSE_SIGNAL_ON, unitTime, signal_func, sleep_func);
+            else if(morse[i]==MORSE_DASH) sendFrame(dashUnitLen, MORSE_SIGNAL_ON, unitTime, signal_func, sleep_func);
+            if(morse[i]==MORSE_DOT || morse[i]==MORSE_DASH)sendFrame(letterPartSpaceUnitLen, MORSE_SIGNAL_OFF, unitTime, signal_func, sleep_func);
+        }
+    }
 }
