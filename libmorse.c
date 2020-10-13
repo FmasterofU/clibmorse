@@ -112,74 +112,89 @@ void addCharacterToStream(unsigned char * ret, const unsigned char * morseKey, u
     else return;
 }
 
-unsigned char* encode(unsigned char * dest, unsigned char* src, unsigned long capacity, char returnType){
-    if(returnType!=RETURN_MORSE_NOTATION && returnType!=RETURN_MORSE_SIGNAL_STREAM)
-        return NULL;
-    unsigned char *ret = dest;
-    unsigned long i, retiter = 0;
-    for(i = 0; i<strlen(src); i++){
-        unsigned char tempChar = (unsigned char) toupper(src[i]);
-        switch(tempChar){
+void encodeCharacter(unsigned char * ret, unsigned char currChar, const unsigned char * const src, unsigned long * retiter, unsigned long srciter, char returnType){
+    switch(currChar){
         case ASCII_SPACE:
             if(returnType==RETURN_MORSE_SIGNAL_STREAM)
                 for(int k = 0; k<wordSpaceUnitLen; k++)
-                    ret[retiter++]=MORSE_SIGNAL_OFF;
-            else ret[retiter++]=ASCII_SPACE;
+                    ret[(*retiter)++]=MORSE_SIGNAL_OFF;
+            else{
+                    ret[(*retiter)++]=ASCII_SPACE;
+                    ret[(*retiter)++]=ASCII_SPACE;
+                    ret[(*retiter)++]=ASCII_SPACE;
+            }
             break;
         case ASCII_FSTOP_PERIOD:
-            addCharacterToStream(ret, fullStopPeriod, &retiter, returnType);
+            addCharacterToStream(ret, fullStopPeriod, retiter, returnType);
             break;
         case ASCII_COLON:
-            addCharacterToStream(ret, colon, &retiter, returnType);
+            addCharacterToStream(ret, colon, retiter, returnType);
             break;
         case ASCII_APOSTROPHE:
-            addCharacterToStream(ret, apostrophe, &retiter, returnType);
+            addCharacterToStream(ret, apostrophe, retiter, returnType);
             break;
         case ASCII_COMMA:
-            addCharacterToStream(ret, comma, &retiter, returnType);
+            addCharacterToStream(ret, comma, retiter, returnType);
             break;
         case ASCII_EXCLAMATION_MARK:
-            addCharacterToStream(ret, exclamationMark, &retiter, returnType);
+            addCharacterToStream(ret, exclamationMark, retiter, returnType);
             break;
         case ASCII_QUESTION_MARK:
-            addCharacterToStream(ret, questionMark, &retiter, returnType);
+            addCharacterToStream(ret, questionMark, retiter, returnType);
             break;
         case ASCII_QUOTATION_MARKS:
-            addCharacterToStream(ret, quotationMarks, &retiter, returnType);
+            addCharacterToStream(ret, quotationMarks, retiter, returnType);
             break;
         case ASCII_SLASH:
-            addCharacterToStream(ret, slash, &retiter, returnType);
+            addCharacterToStream(ret, slash, retiter, returnType);
             break;
         case ASCII_HYPHEN:
-            addCharacterToStream(ret, hyphen, &retiter, returnType);
+            addCharacterToStream(ret, hyphen, retiter, returnType);
             break;
         case ASCII_PLUS_SIGN:
-            addCharacterToStream(ret, plusSign, &retiter, returnType);
+            addCharacterToStream(ret, plusSign, retiter, returnType);
             break;
         case ASCII_EQUALS_SIGN:
-            addCharacterToStream(ret, equalsSign, &retiter, returnType);
+            addCharacterToStream(ret, equalsSign, retiter, returnType);
             break;
         case ASCII_BRACKET_OPEN:
-            addCharacterToStream(ret, bracketOpen, &retiter, returnType);
+            addCharacterToStream(ret, bracketOpen, retiter, returnType);
             break;
         case ASCII_BRACKET_CLOSED:
-            addCharacterToStream(ret, bracketClosed, &retiter, returnType);
+            addCharacterToStream(ret, bracketClosed, retiter, returnType);
             break;
         case ASCII_AT_SIGN:
-            addCharacterToStream(ret, atSign, &retiter, returnType);
+            addCharacterToStream(ret, atSign, retiter, returnType);
             break;
         case ASCII_AMPERSAND:
-            addCharacterToStream(ret, ampersand, &retiter, returnType);
+            addCharacterToStream(ret, ampersand, retiter, returnType);
             break;
         default:
-            if((tempChar<ASCII_A || tempChar>ASCII_Z) && (tempChar<ASCII_ZERO || tempChar>ASCII_NINE)) continue;
-            else addCharacterToStream(ret, (tempChar-ASCII_ZERO<=9) ? numbers[tempChar-ASCII_ZERO] : letters[tempChar-ASCII_A], &retiter, returnType);
+            if((currChar<ASCII_A || currChar>ASCII_Z) && (currChar<ASCII_ZERO || currChar>ASCII_NINE)) return;
+            else addCharacterToStream(ret, (currChar-ASCII_ZERO<=9) ? numbers[currChar-ASCII_ZERO] : letters[currChar-ASCII_A], retiter, returnType);
         }
         if(returnType==RETURN_MORSE_SIGNAL_STREAM)
-            for(int k = 0; k<letterSpaceUnitLen && *(src+i) != ASCII_SPACE && *(src+i+1) != ASCII_SPACE && *(src+i+1) != NULL_TERMINATOR; k++)
-                ret[retiter++]=MORSE_SIGNAL_OFF;
+            for(int k = 0; k<letterSpaceUnitLen && *(src+srciter) != ASCII_SPACE && *(src+srciter+1) != ASCII_SPACE && *(src+srciter+1) != NULL_TERMINATOR; k++)
+                ret[(*retiter)++]=MORSE_SIGNAL_OFF;
+        else if(returnType==RETURN_MORSE_NOTATION && *(src+srciter) != ASCII_SPACE && *(src+srciter+1) != ASCII_SPACE && *(src+srciter+1) != NULL_TERMINATOR)
+            ret[(*retiter)++]=ASCII_SPACE;
+}
+
+unsigned char* encode(unsigned char * dest, unsigned char * src, unsigned long capacity, char returnType){
+    if(returnType!=RETURN_MORSE_NOTATION && returnType!=RETURN_MORSE_SIGNAL_STREAM)
+        return NULL;
+    unsigned long i, destiter = 0;
+    for(i = 0; i<strlen(src); i++){
+        unsigned char tempChar = (unsigned char) toupper(src[i]);
+        unsigned long retiter = 0;
+        unsigned char ret[MAX_MORSE_SIGNAL_STREAM_SIZE_PER_CHAR+1] = {0};
+        encodeCharacter(ret,tempChar, src, &retiter, i, returnType);
+        if(capacity!=0 && destiter+retiter>capacity-1)
+            return NULL;
+        strcat(dest+destiter,ret);
+        destiter+=retiter;
     }
-    return ret;
+    return dest;
 }
 
 unsigned char * encodeMorseDynMemAlloc(unsigned char * src, char returnType){
