@@ -235,7 +235,7 @@ unsigned char* encode(unsigned char * dest, const unsigned char * src, unsigned 
         encodeCharacter(ret,tempChar, src, &retiter, i, returnType);
         if(capacity!=0 && destiter+retiter>capacity-1)
             return NULL;
-        strcat(dest+destiter,ret);
+        strcpy(dest+destiter,ret);
         destiter+=retiter;
     }
     return dest;
